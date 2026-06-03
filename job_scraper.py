@@ -134,6 +134,7 @@ def scrape_all_jobs():
     for company in COMPANIES:
         print(f"  → {company['name']}...")
         jobs = fetch_google_rss(company["query"])
+        print(jobs)
         all_results[company["name"]] = {
             "meta": company,
             "jobs": jobs
