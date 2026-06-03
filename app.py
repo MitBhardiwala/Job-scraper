@@ -1,6 +1,7 @@
 from flask import Flask, jsonify
 from datetime import datetime
 import traceback
+import threading
 
 from job_scraper import (
     load_seen_jobs,
@@ -13,47 +14,35 @@ from job_scraper import (
 
 app = Flask(__name__)
 
-
-@app.route("/run", methods=["GET"])
-def run_scraper():
+def scraper_task():
+    """Runs in background thread — scrapes and sends email."""
     try:
-        started_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
         seen_jobs = load_seen_jobs()
         all_results = scrape_all_jobs()
         new_results, updated_seen = filter_new_jobs(all_results, seen_jobs)
 
         total_new = sum(len(v["jobs"]) for v in new_results.values())
-
         today_str = datetime.now().strftime("%d %b %Y")
         subject = f"Job Alert: {total_new} New Postings — {today_str}"
         html = build_email_html(new_results)
         send_email(subject, html)
-
         save_seen_jobs(updated_seen)
-
-        # Build a simple summary to show in browser
-        summary = {}
-        for company, data in new_results.items():
-            summary[company] = [
-                {"title": j["title"], "link": j["link"], "date": j["date"]}
-                for j in data["jobs"]
-            ]
-
-        return jsonify({
-            "status": "success",
-            "started_at": started_at,
-            "total_new_jobs": total_new,
-            "email_sent_to": "configured receiver",
-            "jobs": summary,
-        })
-
+        print(f"✅ Scraper done. {total_new} new jobs found and emailed.")
     except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": str(e),
-            "trace": traceback.format_exc(),
-        }), 500
+        print(f"❌ Scraper error: {e}")
+        traceback.print_exc()
+
+
+@app.route("/run", methods=["GET"])
+def run_scraper():
+    thread = threading.Thread(target=scraper_task)
+    thread.daemon = True
+    thread.start()
+    return jsonify({
+        "status": "started",
+        "message": "Scraper is running in background. Check your email in ~1-2 minutes.",
+        "started_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    })
 
 
 @app.route("/", methods=["GET"])
@@ -61,7 +50,7 @@ def index():
     return jsonify({
         "message": "Job Alert Bot is running",
         "endpoints": {
-            "GET /run": "Trigger scraper, send email, return found jobs as JSON"
+            "GET /run": "Trigger scraper and send email"
         }
     })
 
