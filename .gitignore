@@ -1,0 +1,7 @@
+config.py
+seen_jobs.json
+*.log
+logs/
+__pycache__/
+*.pyc
+.env
