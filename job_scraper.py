@@ -272,19 +272,6 @@ def send_email(subject, html_body):
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
         server.login(EMAIL_SENDER, EMAIL_PASSWORD)
         server.sendmail(EMAIL_SENDER, EMAIL_PASSWORD, msg.as_string())
-        print("✅ Email sent!")    msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = EMAIL_SENDER
-        msg["To"] = EMAIL_RECEIVER
-        msg.attach(MIMEText(html_body, "html"))
-
-    print(f"📧 Sending email to {EMAIL_RECEIVER}...")
-    # FIXED - port 587, TLS (works on Render and most cloud hosts)
-    with smtplib.SMTP("smtp.gmail.com", 587) as server:
-        server.ehlo()
-        server.starttls()
-        server.login(EMAIL_SENDER, EMAIL_PASSWORD)
-        server.sendmail(EMAIL_SENDER, EMAIL_RECEIVER, msg.as_string())
     print("✅ Email sent!")
 
 
